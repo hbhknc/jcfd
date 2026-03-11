@@ -87,7 +87,7 @@ def apply_filters(data, years, months, categories, days, search):
 filtered_df = apply_filters(df, selected_years, selected_months, selected_categories, selected_days, search_term)
 
 # 4. Main Dashboard Header
-st.markdown('<p class="main-header">🚒 Fire Rescue Incident Dashboard</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-header"> JCFD Fire Call Dashboard</p>', unsafe_allow_html=True)
 st.markdown("---")
 
 # 5. KPI Metrics (Calculated for current selection)
