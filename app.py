@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # 1. Page Configuration
-st.set_page_config(page_title="Fire Rescue Incident Dashboard", page_icon="🚒", layout="wide")
+st.set_page_config(page_title="Jordans Chapel Fire Department // Dashboard", page_icon="🚒", layout="wide")
 
 # Custom CSS for better styling
 st.markdown("""
