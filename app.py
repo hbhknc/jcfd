@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. Page Configuration
+# 1. Page Configuration - MUST BE FIRST
 st.set_page_config(
     page_title="Fire Rescue Incident Analytics",
     page_icon="🚒",
@@ -20,23 +20,30 @@ SUB_TEXT = "#999999"
 # Custom CSS for Professional Dark Look with Depth
 st.markdown(f"""
     <style>
-    /* Main background and header */
-    .stApp {{
-        background-color: {DARK_BG};
-        color: {TEXT_COLOR};
+    /* 1. Global Background Reset - Aggressive */
+    html, body, .stApp, .stAppViewContainer, .stMain, .stHeader,
+    [data-testid="stAppViewContainer"], [data-testid="stMain"],
+    [data-testid="stHeader"], [data-testid="stApp"], [data-testid="stToolbar"] {{
+        background-color: {DARK_BG} !important;
+        color: {TEXT_COLOR} !important;
     }}
 
-    header[data-testid="stHeader"] {{
-        background-color: rgba(0,0,0,0);
+    /* 2. Remove any header/toolbar borders and backgrounds */
+    header[data-testid="stHeader"], [data-testid="stHeader"] {{
+        background-color: transparent !important;
+        background: transparent !important;
+        border-bottom: none !important;
     }}
 
-    .stAppViewContainer {{
-        background-color: {DARK_BG};
+    [data-testid="stToolbar"] {{
+        right: 2rem;
+        background-color: transparent !important;
     }}
 
-    /* Global font and headers */
+    /* 3. Global Typography */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
-    html, body, [class*="css"] {{
+
+    * {{
         font-family: 'Inter', sans-serif;
     }}
 
@@ -58,7 +65,7 @@ st.markdown(f"""
         text-transform: uppercase;
     }}
 
-    /* Metric Card Styling */
+    /* 4. Metric Card Styling */
     [data-testid="stMetricValue"] {{
         font-size: 2.5rem;
         font-weight: 700;
@@ -74,7 +81,7 @@ st.markdown(f"""
         letter-spacing: 0.1em;
     }}
 
-    /* Section Cards - Enhanced Depth with Glassmorphism-lite */
+    /* 5. Section Cards - Enhanced Depth */
     [data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: {CARD_BG} !important;
         border-radius: 1rem !important;
@@ -89,13 +96,15 @@ st.markdown(f"""
         border: 1px solid rgba(255, 75, 75, 0.2) !important;
     }}
 
-    /* Sidebar styling */
-    section[data-testid="stSidebar"] {{
-        background-color: {DARK_BG};
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    /* 6. Sidebar styling */
+    [data-testid="stSidebar"],
+    section[data-testid="stSidebar"],
+    [data-testid="stSidebarNav"] {{
+        background-color: {DARK_BG} !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
     }}
 
-    /* Tabs styling */
+    /* 7. Tabs styling */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 2.5rem;
         background-color: transparent;
@@ -119,14 +128,14 @@ st.markdown(f"""
         color: white !important;
     }}
 
-    /* Input fields refinement */
+    /* 8. Input fields refinement */
     .stTextInput>div>div>input {{
-        background-color: #262730;
-        color: white;
-        border: 1px solid rgba(255,255,255,0.1);
+        background-color: #262730 !important;
+        color: white !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
     }}
 
-    /* Scrollbar customization */
+    /* 9. Scrollbar customization */
     ::-webkit-scrollbar {{
         width: 8px;
         height: 8px;
@@ -210,7 +219,7 @@ with st.sidebar:
             default=df['Standardized Call Category'].dropna().unique()
         )
 
-    if st.button("🔄 Reset All Filters", width="stretch"):
+    if st.button("🔄 Reset All Filters", use_container_width=True):
         st.rerun()
 
     # Calculate filtered_df here so it can be used for sidebar stats
@@ -299,7 +308,7 @@ with tab1:
             height=350,
             hovermode="x unified"
         )
-        st.plotly_chart(fig_line, width="stretch", use_container_width=True)
+        st.plotly_chart(fig_line, use_container_width=True)
 
     col_l, col_r = st.columns(2)
     with col_l:
@@ -320,7 +329,7 @@ with tab1:
                 margin=dict(l=0, r=0, t=10, b=0),
                 coloraxis_showscale=False
             )
-            st.plotly_chart(fig_bar, width="stretch", use_container_width=True)
+            st.plotly_chart(fig_bar, use_container_width=True)
 
     with col_r:
         with st.container(border=True):
@@ -337,7 +346,7 @@ with tab1:
                 height=400,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
-            st.plotly_chart(fig_pie, width="stretch", use_container_width=True)
+            st.plotly_chart(fig_pie, use_container_width=True)
 
 with tab2:
     col1, col2 = st.columns(2)
@@ -357,7 +366,7 @@ with tab2:
                 height=400, margin=dict(l=0, r=0, t=10, b=0),
                 coloraxis_showscale=False
             )
-            st.plotly_chart(fig_dow, width="stretch", use_container_width=True)
+            st.plotly_chart(fig_dow, use_container_width=True)
 
     with col2:
         with st.container(border=True):
@@ -375,7 +384,7 @@ with tab2:
                 paper_bgcolor='rgba(0,0,0,0)',
                 height=400, margin=dict(l=0, r=0, t=10, b=0)
             )
-            st.plotly_chart(fig_hm, width="stretch", use_container_width=True)
+            st.plotly_chart(fig_hm, use_container_width=True)
 
     with st.container(border=True):
         st.subheader("📍 High-Frequency Locations (Top 10)")
@@ -394,7 +403,7 @@ with tab2:
             margin=dict(l=0, r=0, t=10, b=0),
             coloraxis_showscale=False
         )
-        st.plotly_chart(fig_loc, width="stretch", use_container_width=True)
+        st.plotly_chart(fig_loc, use_container_width=True)
 
 with tab3:
     with st.container(border=True):
@@ -409,12 +418,12 @@ with tab3:
                 data=csv,
                 file_name='fire_rescue_export.csv',
                 mime='text/csv',
-                width="stretch"
+                use_container_width=True
             )
 
         st.dataframe(
             filtered_df[['Date', 'Incident #', 'Standardized Call Category', 'Address', 'Notes', 'Day_of_Week']],
-            width="stretch",
+            use_container_width=True,
             hide_index=True
         )
 
