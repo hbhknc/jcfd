@@ -1,6 +1,11 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import numpy as np
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from datetime import timedelta
 
 # 1. Page Configuration - MUST BE FIRST
 st.set_page_config(
@@ -183,7 +188,7 @@ def apply_filters(data, years, months, categories, days, search):
 
 # 4. Sidebar Filters
 with st.sidebar:
-    st.image("JCFD Logo.png", use_container_width=True)
+    st.image("JCFD Logo.png", width="stretch")
     st.markdown(f"<h2 style='color: white; text-align: center;'>Analytics Controls</h2>", unsafe_allow_html=True)
     st.divider()
 
@@ -219,7 +224,7 @@ with st.sidebar:
             default=df['Standardized Call Category'].dropna().unique()
         )
 
-    if st.button("🔄 Reset All Filters", use_container_width=True):
+    if st.button("🔄 Reset All Filters", width="stretch"):
         st.rerun()
 
     # Calculate filtered_df here so it can be used for sidebar stats
@@ -276,7 +281,12 @@ with kpi_cols[3]:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # 6. Content Tabs
-tab1, tab2, tab3 = st.tabs(["📊 EXECUTIVE SUMMARY", "📈 TREND ANALYSIS", "📋 INCIDENT EXPLORER"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📊 EXECUTIVE SUMMARY",
+    "📈 TREND ANALYSIS",
+    "📋 INCIDENT EXPLORER",
+    "🔮 PREDICTIVE INSIGHTS"
+])
 
 with tab1:
     # Summary Info Card
@@ -290,6 +300,27 @@ with tab1:
         with sc3:
             busy_day = filtered_df['Day_of_Week'].mode()[0] if not filtered_df.empty else "N/A"
             st.markdown(f"**Peak Activity Day**\n### {busy_day}")
+
+    with st.container(border=True):
+        st.subheader("⏱️ Incident Frequency & Intervals")
+        # Calculate days between incidents for the filtered dataset
+        if len(filtered_df) > 1:
+            temp_df = filtered_df.sort_values('Date')
+            temp_df['Days_Since_Last'] = temp_df['Date'].diff().dt.days
+            avg_interval = temp_df['Days_Since_Last'].mean()
+            max_gap = temp_df['Days_Since_Last'].max()
+
+            i1, i2, i3 = st.columns(3)
+            with i1:
+                st.metric("Avg Days Between Calls", f"{avg_interval:.1f} Days")
+            with i2:
+                st.metric("Longest Gap", f"{max_gap:.0f} Days")
+            with i3:
+                # Frequency per 100 days
+                freq_100 = (len(filtered_df) / ((temp_df['Date'].max() - temp_df['Date'].min()).days + 1)) * 100
+                st.metric("Calls per 100 Days", f"{freq_100:.1f}")
+        else:
+            st.info("Insufficient data for interval analysis.")
 
     with st.container(border=True):
         st.subheader("📈 Monthly Incident Volume (Long-term Trend)")
@@ -308,7 +339,7 @@ with tab1:
             height=350,
             hovermode="x unified"
         )
-        st.plotly_chart(fig_line, use_container_width=True)
+        st.plotly_chart(fig_line, width="stretch")
 
     col_l, col_r = st.columns(2)
     with col_l:
@@ -329,7 +360,7 @@ with tab1:
                 margin=dict(l=0, r=0, t=10, b=0),
                 coloraxis_showscale=False
             )
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, width="stretch")
 
     with col_r:
         with st.container(border=True):
@@ -346,7 +377,7 @@ with tab1:
                 height=400,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
-            st.plotly_chart(fig_pie, use_container_width=True)
+            st.plotly_chart(fig_pie, width="stretch")
 
 with tab2:
     col1, col2 = st.columns(2)
@@ -366,7 +397,7 @@ with tab2:
                 height=400, margin=dict(l=0, r=0, t=10, b=0),
                 coloraxis_showscale=False
             )
-            st.plotly_chart(fig_dow, use_container_width=True)
+            st.plotly_chart(fig_dow, width="stretch")
 
     with col2:
         with st.container(border=True):
@@ -384,7 +415,7 @@ with tab2:
                 paper_bgcolor='rgba(0,0,0,0)',
                 height=400, margin=dict(l=0, r=0, t=10, b=0)
             )
-            st.plotly_chart(fig_hm, use_container_width=True)
+            st.plotly_chart(fig_hm, width="stretch")
 
     with st.container(border=True):
         st.subheader("📍 High-Frequency Locations (Top 10)")
@@ -403,7 +434,7 @@ with tab2:
             margin=dict(l=0, r=0, t=10, b=0),
             coloraxis_showscale=False
         )
-        st.plotly_chart(fig_loc, use_container_width=True)
+        st.plotly_chart(fig_loc, width="stretch")
 
 with tab3:
     with st.container(border=True):
@@ -418,12 +449,12 @@ with tab3:
                 data=csv,
                 file_name='fire_rescue_export.csv',
                 mime='text/csv',
-                use_container_width=True
+                width="stretch"
             )
 
         st.dataframe(
             filtered_df[['Date', 'Incident #', 'Standardized Call Category', 'Address', 'Notes', 'Day_of_Week']],
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -450,3 +481,173 @@ with tab3:
 
             st.markdown(f"**OFFICIAL NOTES:**")
             st.info(det['Notes'] if pd.notna(det['Notes']) and det['Notes'] != "" else "No notes recorded for this incident.")
+
+with tab4:
+    st.markdown("### 🔮 Operational Intelligence & Forecasting")
+
+    f1, f2 = st.columns([2, 1])
+
+    with f1:
+        with st.container(border=True):
+            st.subheader("📈 6-Month Volume Forecast")
+            # Prepare data for forecasting
+            forecast_df = df.groupby(pd.Grouper(key='Date', freq='ME')).size().reset_index(name='Count')
+            forecast_df['Ordinal'] = np.arange(len(forecast_df))
+
+            if len(forecast_df) > 12:
+                # Linear Regression
+                X = forecast_df[['Ordinal']]
+                y = forecast_df['Count']
+                model = LinearRegression()
+                model.fit(X, y)
+
+                # Predict next 6 months
+                last_ordinal = forecast_df['Ordinal'].max()
+                future_ordinals = np.arange(last_ordinal + 1, last_ordinal + 7).reshape(-1, 1)
+                future_preds = model.predict(future_ordinals)
+
+                # Create future dates
+                last_date = forecast_df['Date'].max()
+                future_dates = [last_date + pd.DateOffset(months=i) for i in range(1, 7)]
+
+                prediction_df = pd.DataFrame({
+                    'Date': future_dates,
+                    'Count': future_preds,
+                    'Status': 'Forecast'
+                })
+                forecast_df['Status'] = 'Historical'
+
+                combined_forecast = pd.concat([forecast_df[['Date', 'Count', 'Status']], prediction_df])
+
+                fig_forecast = px.line(
+                    combined_forecast, x='Date', y='Count', color='Status',
+                    color_discrete_map={'Historical': FIRE_RED, 'Forecast': '#BB86FC'},
+                    line_dash='Status',
+                    template="plotly_dark",
+                    labels={'Count': 'Monthly Incidents'}
+                )
+                fig_forecast.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_forecast, width="stretch")
+                st.caption("Forecast based on linear trend of historical monthly volumes (2020-2025).")
+            else:
+                st.warning("Insufficient historical data to generate a reliable forecast.")
+
+    with f2:
+        with st.container(border=True):
+            st.subheader("🤝 Mutual Aid Balance")
+            # Analyze aid balance
+            aid_given = len(df[df['Auto / Mutual Aid Given Reference'].notna()])
+            aid_received = len(df[df['Auto / Mutual Aid Received'].notna() & (df['Auto / Mutual Aid Received'] != "")])
+
+            aid_df = pd.DataFrame({
+                'Type': ['Aid Given', 'Aid Received'],
+                'Count': [aid_given, aid_received]
+            })
+
+            fig_aid = px.bar(
+                aid_df, x='Type', y='Count',
+                color='Type', color_discrete_map={'Aid Given': FIRE_RED, 'Aid Received': '#4B9BFF'},
+                template="plotly_dark"
+            )
+            fig_aid.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                showlegend=False,
+                xaxis_title="",
+                yaxis_title="Total Incidents"
+            )
+            st.plotly_chart(fig_aid, width="stretch")
+            st.caption("Lifetime Mutual Aid relationship balance.")
+
+        with st.container(border=True):
+            st.subheader("🚒 Unit Utilization")
+            # Heuristic: Check notes for engine/brush truck keywords
+            brush_calls = len(df[df['Notes'].str.contains('Brush|Woods|Grass', case=False, na=False)])
+            engine_calls = len(df[df['Notes'].str.contains('Engine|Structure|Fire', case=False, na=False)])
+            rescue_calls = len(df[df['Notes'].str.contains('Rescue|Extrication|MVC', case=False, na=False)])
+
+            unit_df = pd.DataFrame({
+                'Unit': ['Engine / Fire', 'Brush / Woods', 'Rescue / MVC'],
+                'Incidents': [engine_calls, brush_calls, rescue_calls]
+            })
+
+            fig_unit = px.pie(
+                unit_df, values='Incidents', names='Unit',
+                color_discrete_sequence=px.colors.sequential.YlOrRd_r,
+                hole=0.4, template="plotly_dark"
+            )
+            fig_unit.update_layout(
+                margin=dict(l=0,r=0,t=10,b=0), height=250, showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            )
+            st.plotly_chart(fig_unit, width="stretch")
+            st.caption("Estimated unit deployment based on incident narrative keywords.")
+
+    st.markdown("---")
+
+    c1, c2 = st.columns([1, 2])
+
+    with c1:
+        with st.container(border=True):
+            st.subheader("☁️ Narrative Intelligence")
+            # Generate Word Cloud from Filtered Notes
+            all_notes = " ".join(filtered_df['Notes'].fillna("").astype(str))
+            if len(all_notes.strip()) > 10:
+                wordcloud = WordCloud(
+                    width=800, height=800,
+                    background_color=DARK_BG,
+                    colormap='Reds',
+                    min_font_size=10
+                ).generate(all_notes)
+
+                fig_wc, ax = plt.subplots(figsize=(8, 8))
+                ax.imshow(wordcloud)
+                ax.axis("off")
+                fig_wc.patch.set_facecolor(DARK_BG)
+                st.pyplot(fig_wc)
+                st.caption("Most frequent terms found in incident narratives.")
+            else:
+                st.info("Not enough narrative data to generate word cloud.")
+
+        with st.container(border=True):
+            st.subheader("🔍 Keyword Seasonality")
+            kw_to_track = st.text_input("Track Keyword Seasonality", value="cooking", key="kw_track")
+            if kw_to_track:
+                kw_df = df[df['Notes'].str.contains(kw_to_track, case=False, na=False)]
+                if not kw_df.empty:
+                    kw_seasonal = kw_df['Month'].value_counts().reindex(months_order, fill_value=0).reset_index()
+                    kw_seasonal.columns = ['Month', 'Volume']
+                    fig_kw = px.line(kw_seasonal, x='Month', y='Volume', markers=True,
+                                     color_discrete_sequence=['#FFD700'], template="plotly_dark")
+                    fig_kw.update_layout(height=250, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="", yaxis_title="")
+                    st.plotly_chart(fig_kw, width="stretch")
+                    st.caption(f"Historical seasonal trend for incidents mentioning '{kw_to_track}'.")
+                else:
+                    st.warning(f"No incidents found containing '{kw_to_track}'.")
+
+    with c2:
+        with st.container(border=True):
+            st.subheader("⚡ Operational Stress Analysis")
+            # Calculate incidents per day to find "peak stress" days
+            stress_df = filtered_df.groupby('Date').size().reset_index(name='Daily_Volume')
+            stress_bins = stress_df['Daily_Volume'].value_counts().sort_index().reset_index()
+            stress_bins.columns = ['Incidents_in_Day', 'Frequency']
+
+            fig_stress = px.bar(
+                stress_bins, x='Incidents_in_Day', y='Frequency',
+                labels={'Incidents_in_Day': 'Incidents per 24h Window', 'Frequency': 'Days with this Volume'},
+                template="plotly_dark",
+                color='Frequency',
+                color_continuous_scale="Reds"
+            )
+            fig_stress.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                coloraxis_showscale=False
+            )
+            st.plotly_chart(fig_stress, width="stretch")
+            st.caption("Distribution of daily incident load (detecting multi-call days).")

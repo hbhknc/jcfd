@@ -1,3 +1,6 @@
 streamlit
 pandas
 plotly
+wordcloud
+scikit-learn
+matplotlib
