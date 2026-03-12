@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 # 1. Page Configuration
 st.set_page_config(
@@ -129,8 +128,8 @@ def apply_filters(data, years, months, categories, days, search):
 
 # 4. Sidebar Filters
 with st.sidebar:
-    st.image("https://img.icons8.com/color/96/000000/fire-station.png", width=80)
-    st.markdown(f"<h2 style='color: {DARK_GREY};'>Analytics Controls</h2>", unsafe_allow_html=True)
+    st.image("JCFD Logo.png", use_container_width=True)
+    st.markdown(f"<h2 style='color: {DARK_GREY}; text-align: center;'>Analytics Controls</h2>", unsafe_allow_html=True)
     st.divider()
 
     # Search by Keyword
@@ -185,8 +184,12 @@ with st.sidebar:
     """)
 
 # 4. Main Dashboard Header
-st.markdown('<div class="main-header">🚒 Fire Rescue Incident Command Centre</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Strategic analytics and operational tracking for fire rescue operations (2020 - 2025)</div>', unsafe_allow_html=True)
+head_col1, head_col2 = st.columns([1, 5])
+with head_col1:
+    st.image("JCFD Logo.png", width=120)
+with head_col2:
+    st.markdown('<div class="main-header">Jordans Chapel Fire Department</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Incident Command Centre • Strategic Operational Analytics (2020 - 2025)</div>', unsafe_allow_html=True)
 
 # 5. KPI Metrics
 total_calls = len(filtered_df)
@@ -221,6 +224,18 @@ st.markdown("<br>", unsafe_allow_html=True)
 tab1, tab2, tab3 = st.tabs(["📊 EXECUTIVE SUMMARY", "📈 TREND ANALYSIS", "📋 INCIDENT EXPLORER"])
 
 with tab1:
+    # Summary Info Card
+    with st.container(border=True):
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            avg_monthly = total_calls / (len(selected_years) * 12) if selected_years else 0
+            st.markdown(f"**Avg Incidents / Month**\n### {avg_monthly:.1f}")
+        with sc2:
+            st.markdown(f"**Active Reporting Period**\n### {len(selected_years)} Year(s)")
+        with sc3:
+            busy_day = filtered_df['Day_of_Week'].mode()[0] if not filtered_df.empty else "N/A"
+            st.markdown(f"**Peak Activity Day**\n### {busy_day}")
+
     with st.container(border=True):
         st.subheader("Monthly Incident Volume (Long-term Trend)")
         timeline_df = filtered_df.groupby([pd.Grouper(key='Date', freq='ME')]).size().reset_index(name='Count')
@@ -323,6 +338,7 @@ with tab2:
 with tab3:
     with st.container(border=True):
         st.subheader("Incident Registry")
+        st.info("💡 Use the sidebar search to filter incidents by keywords in the notes (e.g., 'cooking', 'accident', 'woods').")
 
         col_dl, col_sp = st.columns([1, 4])
         with col_dl:
@@ -340,3 +356,27 @@ with tab3:
             width="stretch",
             hide_index=True
         )
+
+    if not filtered_df.empty:
+        with st.container(border=True):
+            st.subheader("🔍 Detailed Incident Lookup")
+            selected_idx = st.selectbox(
+                "Select an incident for full report details:",
+                options=filtered_df.index,
+                format_func=lambda x: f"{filtered_df.loc[x, 'Date'].strftime('%Y-%m-%d')} | {filtered_df.loc[x, 'Incident #']} | {filtered_df.loc[x, 'Standardized Call Category']}"
+            )
+
+            det = filtered_df.loc[selected_idx]
+            d1, d2, d3 = st.columns(3)
+            with d1:
+                st.markdown(f"**INCIDENT NUMBER**\n{det['Incident #']}")
+                st.markdown(f"**DATE / TIME**\n{det['Date'].strftime('%A, %B %d, %Y')}")
+            with d2:
+                st.markdown(f"**ADDRESS**\n{det['Address']}")
+                st.markdown(f"**CATEGORY**\n{det['Standardized Call Category']}")
+            with d3:
+                st.markdown(f"**PROPERTY OWNER / DESC**\n{det['Property Owner / Desc.'] if pd.notna(det['Property Owner / Desc.']) else 'N/A'}")
+                st.markdown(f"**CALL TYPE**\n{det['Call Type']}")
+
+            st.markdown(f"**OFFICIAL NOTES:**")
+            st.info(det['Notes'] if pd.notna(det['Notes']) and det['Notes'] != "" else "No notes recorded for this incident.")
