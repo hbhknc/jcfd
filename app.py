@@ -11,89 +11,127 @@ st.set_page_config(
 )
 
 # Professional Color Palette
-FIRE_RED = "#D62728"
-DARK_GREY = "#2C3E50"
-LIGHT_GREY = "#ECF0F1"
-ACCENT_BLUE = "#3498DB"
+FIRE_RED = "#FF4B4B"
+DARK_BG = "#0E1117"
+CARD_BG = "#1A1C24"
+TEXT_COLOR = "#E0E0E0"
+SUB_TEXT = "#999999"
 
-# Custom CSS for Professional Look
+# Custom CSS for Professional Dark Look with Depth
 st.markdown(f"""
     <style>
     /* Main background */
     .stApp {{
-        background-color: #F8F9FA;
+        background-color: {DARK_BG};
+        color: {TEXT_COLOR};
     }}
 
     /* Global font and headers */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
     html, body, [class*="css"] {{
         font-family: 'Inter', sans-serif;
     }}
 
     .main-header {{
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: {DARK_GREY};
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
+        font-size: 2.8rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 0.2rem;
+        letter-spacing: -0.02em;
+        text-shadow: 0px 4px 10px rgba(0,0,0,0.3);
     }}
 
     .sub-header {{
-        font-size: 1.2rem;
-        color: #7F8C8D;
+        font-size: 1.1rem;
+        font-weight: 300;
+        color: {SUB_TEXT};
         margin-bottom: 2rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
     }}
 
     /* Metric Card Styling */
     [data-testid="stMetricValue"] {{
-        font-size: 2.2rem;
+        font-size: 2.5rem;
         font-weight: 700;
         color: {FIRE_RED};
+        text-shadow: 0px 0px 15px rgba(255, 75, 75, 0.3);
     }}
 
     [data-testid="stMetricLabel"] {{
-        font-size: 1rem;
+        font-size: 0.85rem;
         font-weight: 600;
-        color: {DARK_GREY};
+        color: {SUB_TEXT};
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
     }}
 
-    /* Section Cards - Styling Streamlit containers with border */
+    /* Section Cards - Enhanced Depth with Glassmorphism-lite */
     [data-testid="stVerticalBlockBorderWrapper"] {{
-        background-color: white;
-        border-radius: 0.8rem !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        margin-bottom: 1rem;
-        border: 1px solid #E9ECEF !important;
-        padding: 1rem !important;
+        background-color: {CARD_BG} !important;
+        border-radius: 1rem !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        padding: 1.5rem !important;
+        transition: transform 0.3s ease;
+    }}
+
+    [data-testid="stVerticalBlockBorderWrapper"]:hover {{
+        border: 1px solid rgba(255, 75, 75, 0.2) !important;
     }}
 
     /* Sidebar styling */
     section[data-testid="stSidebar"] {{
-        background-color: white;
-        border-right: 1px solid #E9ECEF;
+        background-color: {DARK_BG};
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
     }}
 
     /* Tabs styling */
     .stTabs [data-baseweb="tab-list"] {{
-        gap: 2rem;
+        gap: 2.5rem;
+        background-color: transparent;
     }}
 
     .stTabs [data-baseweb="tab"] {{
-        height: 50px;
+        height: 60px;
         white-space: pre-wrap;
         background-color: transparent;
-        border-radius: 4px 4px 0 0;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        border-radius: 0;
+        border-bottom: 2px solid transparent;
+        color: {SUB_TEXT} !important;
+        font-weight: 400;
+        transition: all 0.2s ease;
     }}
 
     .stTabs [aria-selected="true"] {{
         background-color: transparent;
         border-bottom: 3px solid {FIRE_RED} !important;
-        font-weight: 700;
-        color: {FIRE_RED} !important;
+        font-weight: 700 !important;
+        color: white !important;
+    }}
+
+    /* Input fields refinement */
+    .stTextInput>div>div>input {{
+        background-color: #262730;
+        color: white;
+        border: 1px solid rgba(255,255,255,0.1);
+    }}
+
+    /* Scrollbar customization */
+    ::-webkit-scrollbar {{
+        width: 8px;
+        height: 8px;
+    }}
+    ::-webkit-scrollbar-track {{
+        background: {DARK_BG};
+    }}
+    ::-webkit-scrollbar-thumb {{
+        background: #333;
+        border-radius: 10px;
+    }}
+    ::-webkit-scrollbar-thumb:hover {{
+        background: {FIRE_RED};
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -129,7 +167,7 @@ def apply_filters(data, years, months, categories, days, search):
 # 4. Sidebar Filters
 with st.sidebar:
     st.image("JCFD Logo.png", use_container_width=True)
-    st.markdown(f"<h2 style='color: {DARK_GREY}; text-align: center;'>Analytics Controls</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color: white; text-align: center;'>Analytics Controls</h2>", unsafe_allow_html=True)
     st.divider()
 
     # Search by Keyword
@@ -237,103 +275,118 @@ with tab1:
             st.markdown(f"**Peak Activity Day**\n### {busy_day}")
 
     with st.container(border=True):
-        st.subheader("Monthly Incident Volume (Long-term Trend)")
+        st.subheader("📈 Monthly Incident Volume (Long-term Trend)")
         timeline_df = filtered_df.groupby([pd.Grouper(key='Date', freq='ME')]).size().reset_index(name='Count')
         fig_line = px.line(
             timeline_df, x='Date', y='Count',
             color_discrete_sequence=[FIRE_RED],
-            markers=True
+            markers=True,
+            template="plotly_dark"
         )
         fig_line.update_layout(
             plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
             xaxis_title="", yaxis_title="Call Volume",
             margin=dict(l=0, r=0, t=10, b=0),
             height=350,
             hovermode="x unified"
         )
-        st.plotly_chart(fig_line, width="stretch")
+        st.plotly_chart(fig_line, width="stretch", use_container_width=True)
 
     col_l, col_r = st.columns(2)
     with col_l:
         with st.container(border=True):
-            st.subheader("Calls by Category")
+            st.subheader("🚒 Calls by Category")
             cat_df = filtered_df['Standardized Call Category'].value_counts().reset_index(name='Count')
             fig_bar = px.bar(
                 cat_df, x='Count', y='Standardized Call Category',
                 orientation='h', color='Count',
-                color_continuous_scale=[[0, '#FADBD8'], [1, FIRE_RED]]
+                color_continuous_scale=[[0, '#331111'], [1, FIRE_RED]],
+                template="plotly_dark"
             )
             fig_bar.update_layout(
                 yaxis={'categoryorder':'total ascending', 'title': ''},
                 plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
                 height=400,
                 margin=dict(l=0, r=0, t=10, b=0),
                 coloraxis_showscale=False
             )
-            st.plotly_chart(fig_bar, width="stretch")
+            st.plotly_chart(fig_bar, width="stretch", use_container_width=True)
 
     with col_r:
         with st.container(border=True):
-            st.subheader("Quarterly Distribution")
+            st.subheader("🍕 Quarterly Distribution")
             q_df = filtered_df['Quarter'].value_counts().reset_index(name='Count').sort_values('Quarter')
             fig_pie = px.pie(
                 q_df, values='Count', names='Quarter',
-                hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r
+                hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r,
+                template="plotly_dark"
             )
             fig_pie.update_layout(
                 margin=dict(l=0, r=0, t=10, b=0),
+                paper_bgcolor='rgba(0,0,0,0)',
                 height=400,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
-            st.plotly_chart(fig_pie, width="stretch")
+            st.plotly_chart(fig_pie, width="stretch", use_container_width=True)
 
 with tab2:
     col1, col2 = st.columns(2)
     with col1:
         with st.container(border=True):
-            st.subheader("Volume by Day of Week")
+            st.subheader("📅 Volume by Day of Week")
             dow_df = filtered_df['Day_of_Week'].value_counts().reindex(days_order).reset_index(name='Count')
             fig_dow = px.bar(
                 dow_df, x='Day_of_Week', y='Count',
-                color='Count', color_continuous_scale=[[0, '#FADBD8'], [1, FIRE_RED]]
+                color='Count', color_continuous_scale=[[0, '#331111'], [1, FIRE_RED]],
+                template="plotly_dark"
             )
             fig_dow.update_layout(
                 plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
                 xaxis_title="", yaxis_title="",
                 height=400, margin=dict(l=0, r=0, t=10, b=0),
                 coloraxis_showscale=False
             )
-            st.plotly_chart(fig_dow, width="stretch")
+            st.plotly_chart(fig_dow, width="stretch", use_container_width=True)
 
     with col2:
         with st.container(border=True):
-            st.subheader("Seasonal Patterns (Heatmap)")
+            st.subheader("🔥 Seasonal Patterns (Heatmap)")
             heatmap_data = filtered_df.groupby(['Month', 'Day_of_Week']).size().unstack(fill_value=0)
             heatmap_data = heatmap_data.reindex(index=months_order, columns=days_order, fill_value=0)
             fig_hm = px.imshow(
                 heatmap_data,
                 labels=dict(x="Day", y="Month", color="Calls"),
-                color_continuous_scale="Reds"
+                color_continuous_scale="Reds",
+                template="plotly_dark"
             )
-            fig_hm.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=0))
-            st.plotly_chart(fig_hm, width="stretch")
+            fig_hm.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                height=400, margin=dict(l=0, r=0, t=10, b=0)
+            )
+            st.plotly_chart(fig_hm, width="stretch", use_container_width=True)
 
     with st.container(border=True):
-        st.subheader("High-Frequency Locations (Top 10)")
+        st.subheader("📍 High-Frequency Locations (Top 10)")
         top_loc = filtered_df['Address'].value_counts().head(10).reset_index(name='Count')
         fig_loc = px.bar(
             top_loc, x='Count', y='Address',
             orientation='h', color='Count',
-            color_continuous_scale=[[0, '#E8DAEF'], [1, '#8E44AD']]
+            color_continuous_scale=[[0, '#221133'], [1, '#BB86FC']],
+            template="plotly_dark"
         )
         fig_loc.update_layout(
             yaxis={'categoryorder':'total ascending', 'title': ''},
             plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
             height=400,
             margin=dict(l=0, r=0, t=10, b=0),
             coloraxis_showscale=False
         )
-        st.plotly_chart(fig_loc, width="stretch")
+        st.plotly_chart(fig_loc, width="stretch", use_container_width=True)
 
 with tab3:
     with st.container(border=True):
