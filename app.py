@@ -20,10 +20,18 @@ SUB_TEXT = "#999999"
 # Custom CSS for Professional Dark Look with Depth
 st.markdown(f"""
     <style>
-    /* Main background */
+    /* Main background and header */
     .stApp {{
         background-color: {DARK_BG};
         color: {TEXT_COLOR};
+    }}
+
+    header[data-testid="stHeader"] {{
+        background-color: rgba(0,0,0,0);
+    }}
+
+    .stAppViewContainer {{
+        background-color: {DARK_BG};
     }}
 
     /* Global font and headers */
@@ -54,7 +62,7 @@ st.markdown(f"""
     [data-testid="stMetricValue"] {{
         font-size: 2.5rem;
         font-weight: 700;
-        color: {FIRE_RED};
+        color: {FIRE_RED} !important;
         text-shadow: 0px 0px 15px rgba(255, 75, 75, 0.3);
     }}
 
