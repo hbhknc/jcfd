@@ -1,26 +1,104 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 # 1. Page Configuration
-st.set_page_config(page_title="Jordans Chapel Fire Department // Dashboard", page_icon="🚒", layout="wide")
+st.set_page_config(
+    page_title="Fire Rescue Incident Analytics",
+    page_icon="🚒",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# Custom CSS for better styling
-st.markdown("""
+# Professional Color Palette
+FIRE_RED = "#D62728"
+DARK_GREY = "#2C3E50"
+LIGHT_GREY = "#ECF0F1"
+ACCENT_BLUE = "#3498DB"
+
+# Custom CSS for Professional Look
+st.markdown(f"""
     <style>
-    [data-testid="stMetricValue"] {
-        font-size: 2rem;
-    }
-    .main-header {
+    /* Main background */
+    .stApp {{
+        background-color: #F8F9FA;
+    }}
+
+    /* Global font and headers */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    html, body, [class*="css"] {{
+        font-family: 'Inter', sans-serif;
+    }}
+
+    .main-header {{
         font-size: 2.5rem;
-        font-weight: bold;
-        color: #d62728;
-    }
+        font-weight: 700;
+        color: {DARK_GREY};
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }}
+
+    .sub-header {{
+        font-size: 1.2rem;
+        color: #7F8C8D;
+        margin-bottom: 2rem;
+    }}
+
+    /* Metric Card Styling */
+    [data-testid="stMetricValue"] {{
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: {FIRE_RED};
+    }}
+
+    [data-testid="stMetricLabel"] {{
+        font-size: 1rem;
+        font-weight: 600;
+        color: {DARK_GREY};
+    }}
+
+    /* Section Cards - Styling Streamlit containers with border */
+    [data-testid="stVerticalBlockBorderWrapper"] {{
+        background-color: white;
+        border-radius: 0.8rem !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+        border: 1px solid #E9ECEF !important;
+        padding: 1rem !important;
+    }}
+
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] {{
+        background-color: white;
+        border-right: 1px solid #E9ECEF;
+    }}
+
+    /* Tabs styling */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 2rem;
+    }}
+
+    .stTabs [data-baseweb="tab"] {{
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: transparent;
+        border-radius: 4px 4px 0 0;
+        gap: 1px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }}
+
+    .stTabs [aria-selected="true"] {{
+        background-color: transparent;
+        border-bottom: 3px solid {FIRE_RED} !important;
+        font-weight: 700;
+        color: {FIRE_RED} !important;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Load Data (Cache it so it loads fast and simulates real-time efficiency)
+# 2. Load Data
 @st.cache_data
 def load_data():
     df = pd.read_csv('cleaned_fire_call_data_2020_2025_final.csv')
@@ -31,47 +109,12 @@ def load_data():
     df['Day_of_Week'] = df['Date'].dt.day_name()
     df['Day_Num'] = df['Date'].dt.dayofweek
     df['Quarter'] = "Q" + df['Date'].dt.quarter.astype(str)
-    # Sort for chronological charting
     df = df.sort_values(by='Date')
     return df
 
 df = load_data()
 
-# 3. Sidebar Filters
-st.sidebar.image("https://img.icons8.com/emoji/96/000000/fire-engine.png", width=100)
-st.sidebar.header("🔍 Global Filters")
-
-# Search by Keyword
-search_term = st.sidebar.text_input("Search Notes (Keyword):", "")
-
-selected_years = st.sidebar.multiselect(
-    "Select Year(s):",
-    options=sorted(df['Year'].unique(), reverse=True),
-    default=df['Year'].unique()
-)
-
-months_order = ["January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"]
-selected_months = st.sidebar.multiselect(
-    "Select Month(s):",
-    options=months_order,
-    default=months_order
-)
-
-selected_categories = st.sidebar.multiselect(
-    "Select Call Category:",
-    options=sorted(df['Standardized Call Category'].dropna().unique()),
-    default=df['Standardized Call Category'].dropna().unique()
-)
-
-days_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-selected_days = st.sidebar.multiselect(
-    "Select Day(s) of Week:",
-    options=days_order,
-    default=days_order
-)
-
-# Function to apply filters (used for current and previous year comparison)
+# 3. Filter Application Logic
 def apply_filters(data, years, months, categories, days, search):
     f_df = data[
         (data['Year'].isin(years)) &
@@ -83,177 +126,257 @@ def apply_filters(data, years, months, categories, days, search):
         f_df = f_df[f_df['Notes'].str.contains(search, case=False, na=False)]
     return f_df
 
-# Apply filters to get current selection
-filtered_df = apply_filters(df, selected_years, selected_months, selected_categories, selected_days, search_term)
+# 4. Sidebar Filters
+with st.sidebar:
+    st.image("JCFD Logo.png", use_container_width=True)
+    st.markdown(f"<h2 style='color: {DARK_GREY}; text-align: center;'>Analytics Controls</h2>", unsafe_allow_html=True)
+    st.divider()
+
+    # Search by Keyword
+    search_term = st.text_input("🔍 Search Notes (Keyword)", placeholder="e.g. 'unattended cooking'")
+
+    with st.expander("📅 Time Filters", expanded=True):
+        selected_years = st.multiselect(
+            "Select Year(s)",
+            options=sorted(df['Year'].unique(), reverse=True),
+            default=df['Year'].unique()
+        )
+
+        months_order = ["January", "February", "March", "April", "May", "June",
+                        "July", "August", "September", "October", "November", "December"]
+        selected_months = st.multiselect(
+            "Select Month(s)",
+            options=months_order,
+            default=months_order
+        )
+
+        days_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        selected_days = st.multiselect(
+            "Select Day(s) of Week",
+            options=days_order,
+            default=days_order
+        )
+
+    with st.expander("🚒 Incident Filters", expanded=True):
+        selected_categories = st.multiselect(
+            "Select Call Category",
+            options=sorted(df['Standardized Call Category'].dropna().unique()),
+            default=df['Standardized Call Category'].dropna().unique()
+        )
+
+    if st.button("🔄 Reset All Filters", width="stretch"):
+        st.rerun()
+
+    # Calculate filtered_df here so it can be used for sidebar stats
+    filtered_df = apply_filters(df, selected_years, selected_months, selected_categories, selected_days, search_term)
+
+    st.divider()
+    st.markdown("### 📊 Dataset Overview")
+    total_recs = len(df)
+    filtered_recs = len(filtered_df)
+    st.write(f"**Viewing:** {filtered_recs:,} / {total_recs:,} incidents")
+    st.progress(filtered_recs / total_recs if total_recs > 0 else 0)
+
+    st.markdown("""
+    ---
+    **System Status:** 🟢 Operational
+    **Version:** 2.1.0
+    """)
 
 # 4. Main Dashboard Header
-st.markdown('<p class="main-header"> JCFD Fire Call Dashboard</p>', unsafe_allow_html=True)
-st.markdown("---")
+head_col1, head_col2 = st.columns([1, 5])
+with head_col1:
+    st.image("JCFD Logo.png", width=120)
+with head_col2:
+    st.markdown('<div class="main-header">Jordans Chapel Fire Department</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Incident Command Centre • Strategic Operational Analytics (2020 - 2025)</div>', unsafe_allow_html=True)
 
-# 5. KPI Metrics (Calculated for current selection)
+# 5. KPI Metrics
 total_calls = len(filtered_df)
-latest_date = filtered_df['Date'].max().strftime('%Y-%m-%d') if not filtered_df.empty else "N/A"
+latest_date = filtered_df['Date'].max().strftime('%b %d, %Y') if not filtered_df.empty else "N/A"
 top_category = filtered_df['Standardized Call Category'].mode()[0] if not filtered_df.empty else "N/A"
 mutual_aid_calls = len(filtered_df[filtered_df['Standardized Call Category'].str.contains('Aid', na=False)])
 
-# Calculate YoY Growth if single year is selected
-yoy_text = ""
+yoy_text = None
 if len(selected_years) == 1:
     current_year = selected_years[0]
     prev_year = current_year - 1
     if prev_year in df['Year'].unique():
-        # Apply same filters but for the previous year
         prev_year_df = apply_filters(df, [prev_year], selected_months, selected_categories, selected_days, search_term)
         prev_year_calls = len(prev_year_df)
         if prev_year_calls > 0:
             growth = ((total_calls - prev_year_calls) / prev_year_calls) * 100
-            yoy_text = f"{growth:+.1f}% vs last year"
-        else:
-            yoy_text = "N/A (No data for prev year)"
+            yoy_text = f"{growth:+.1f}% vs {prev_year}"
 
-# Display KPIs
-kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-kpi1.metric("Total Incidents", f"{total_calls:,}", delta=yoy_text if yoy_text else None)
-kpi2.metric("Top Call Category", top_category)
-kpi3.metric("Mutual Aid Calls", f"{mutual_aid_calls:,}")
-kpi4.metric("Last Incident", latest_date)
+kpi_cols = st.columns(4)
+with kpi_cols[0]:
+    st.metric("TOTAL INCIDENTS", f"{total_calls:,}", delta=yoy_text)
+with kpi_cols[1]:
+    st.metric("TOP CALL CATEGORY", top_category[:25] + "..." if len(top_category) > 25 else top_category)
+with kpi_cols[2]:
+    st.metric("MUTUAL AID CALLS", f"{mutual_aid_calls:,}")
+with kpi_cols[3]:
+    st.metric("LAST RECORDED INCIDENT", latest_date)
 
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
 
-# 6. Tabs for better organization
-tab1, tab2, tab3 = st.tabs(["📊 Executive Summary", "📈 Incident Analysis", "📋 Data Explorer"])
+# 6. Content Tabs
+tab1, tab2, tab3 = st.tabs(["📊 EXECUTIVE SUMMARY", "📈 TREND ANALYSIS", "📋 INCIDENT EXPLORER"])
 
 with tab1:
-    st.subheader("High-Level Trends")
+    # Summary Info Card
+    with st.container(border=True):
+        sc1, sc2, sc3 = st.columns(3)
+        with sc1:
+            avg_monthly = total_calls / (len(selected_years) * 12) if selected_years else 0
+            st.markdown(f"**Avg Incidents / Month**\n### {avg_monthly:.1f}")
+        with sc2:
+            st.markdown(f"**Active Reporting Period**\n### {len(selected_years)} Year(s)")
+        with sc3:
+            busy_day = filtered_df['Day_of_Week'].mode()[0] if not filtered_df.empty else "N/A"
+            st.markdown(f"**Peak Activity Day**\n### {busy_day}")
 
-    # Calls Over Time (Grouped by Month) - Using 'ME' for Month End frequency as per deprecation warning
-    timeline_df = filtered_df.groupby([pd.Grouper(key='Date', freq='ME')]).size().reset_index(name='Incident Count')
-    fig_line = px.line(
-        timeline_df,
-        x='Date',
-        y='Incident Count',
-        markers=True,
-        line_shape='spline',
-        title="Monthly Incident Volume",
-        color_discrete_sequence=['#d62728']
-    )
-    fig_line.update_layout(
-        xaxis_title="Timeline",
-        yaxis_title="Total Calls",
-        height=400,
-        hovermode="x unified",
-        template="plotly_white"
-    )
-    st.plotly_chart(fig_line, width='stretch')
+    with st.container(border=True):
+        st.subheader("Monthly Incident Volume (Long-term Trend)")
+        timeline_df = filtered_df.groupby([pd.Grouper(key='Date', freq='ME')]).size().reset_index(name='Count')
+        fig_line = px.line(
+            timeline_df, x='Date', y='Count',
+            color_discrete_sequence=[FIRE_RED],
+            markers=True
+        )
+        fig_line.update_layout(
+            plot_bgcolor='rgba(0,0,0,0)',
+            xaxis_title="", yaxis_title="Call Volume",
+            margin=dict(l=0, r=0, t=10, b=0),
+            height=350,
+            hovermode="x unified"
+        )
+        st.plotly_chart(fig_line, width="stretch")
 
-    col_left, col_right = st.columns(2)
-    with col_left:
-        # Category Breakdown
-        cat_df = filtered_df['Standardized Call Category'].value_counts().reset_index()
-        cat_df.columns = ['Category', 'Count']
-        fig_bar = px.bar(
-            cat_df,
-            x='Count',
-            y='Category',
-            orientation='h',
-            title="Incidents by Category",
-            color='Count',
-            color_continuous_scale='Reds'
-        )
-        fig_bar.update_layout(
-            yaxis={'categoryorder':'total ascending'},
-            height=450,
-            template="plotly_white"
-        )
-        st.plotly_chart(fig_bar, width='stretch')
+    col_l, col_r = st.columns(2)
+    with col_l:
+        with st.container(border=True):
+            st.subheader("Calls by Category")
+            cat_df = filtered_df['Standardized Call Category'].value_counts().reset_index(name='Count')
+            fig_bar = px.bar(
+                cat_df, x='Count', y='Standardized Call Category',
+                orientation='h', color='Count',
+                color_continuous_scale=[[0, '#FADBD8'], [1, FIRE_RED]]
+            )
+            fig_bar.update_layout(
+                yaxis={'categoryorder':'total ascending', 'title': ''},
+                plot_bgcolor='rgba(0,0,0,0)',
+                height=400,
+                margin=dict(l=0, r=0, t=10, b=0),
+                coloraxis_showscale=False
+            )
+            st.plotly_chart(fig_bar, width="stretch")
 
-    with col_right:
-        # Calls by Quarter
-        q_df = filtered_df['Quarter'].value_counts().reset_index()
-        q_df.columns = ['Quarter', 'Count']
-        q_df = q_df.sort_values('Quarter')
-        fig_pie = px.pie(
-            q_df,
-            values='Count',
-            names='Quarter',
-            title="Distribution by Quarter",
-            hole=0.4,
-            color_discrete_sequence=px.colors.sequential.Reds_r
-        )
-        fig_pie.update_traces(textinfo='percent+label')
-        st.plotly_chart(fig_pie, width='stretch')
+    with col_r:
+        with st.container(border=True):
+            st.subheader("Quarterly Distribution")
+            q_df = filtered_df['Quarter'].value_counts().reset_index(name='Count').sort_values('Quarter')
+            fig_pie = px.pie(
+                q_df, values='Count', names='Quarter',
+                hole=0.6, color_discrete_sequence=px.colors.sequential.Reds_r
+            )
+            fig_pie.update_layout(
+                margin=dict(l=0, r=0, t=10, b=0),
+                height=400,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig_pie, width="stretch")
 
 with tab2:
-    st.subheader("Detailed Incident Patterns")
-
     col1, col2 = st.columns(2)
-
     with col1:
-        # Day of Week Analysis
-        dow_df = filtered_df['Day_of_Week'].value_counts().reindex(days_order).reset_index()
-        dow_df.columns = ['Day', 'Count']
-        fig_dow = px.bar(
-            dow_df,
-            x='Day',
-            y='Count',
-            title="Calls by Day of Week",
-            color='Count',
-            color_continuous_scale='Oranges'
-        )
-        fig_dow.update_layout(template="plotly_white")
-        st.plotly_chart(fig_dow, width='stretch')
+        with st.container(border=True):
+            st.subheader("Volume by Day of Week")
+            dow_df = filtered_df['Day_of_Week'].value_counts().reindex(days_order).reset_index(name='Count')
+            fig_dow = px.bar(
+                dow_df, x='Day_of_Week', y='Count',
+                color='Count', color_continuous_scale=[[0, '#FADBD8'], [1, FIRE_RED]]
+            )
+            fig_dow.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                xaxis_title="", yaxis_title="",
+                height=400, margin=dict(l=0, r=0, t=10, b=0),
+                coloraxis_showscale=False
+            )
+            st.plotly_chart(fig_dow, width="stretch")
 
     with col2:
-        # Heatmap: Day of Week vs Month
-        heatmap_data = filtered_df.groupby(['Month', 'Day_of_Week']).size().unstack(fill_value=0)
-        # Reorder with fill_value=0 to handle missing combinations
-        heatmap_data = heatmap_data.reindex(index=months_order, columns=days_order, fill_value=0)
+        with st.container(border=True):
+            st.subheader("Seasonal Patterns (Heatmap)")
+            heatmap_data = filtered_df.groupby(['Month', 'Day_of_Week']).size().unstack(fill_value=0)
+            heatmap_data = heatmap_data.reindex(index=months_order, columns=days_order, fill_value=0)
+            fig_hm = px.imshow(
+                heatmap_data,
+                labels=dict(x="Day", y="Month", color="Calls"),
+                color_continuous_scale="Reds"
+            )
+            fig_hm.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=0))
+            st.plotly_chart(fig_hm, width="stretch")
 
-        fig_heatmap = px.imshow(
-            heatmap_data,
-            labels=dict(x="Day of Week", y="Month", color="Incidents"),
-            x=heatmap_data.columns,
-            y=heatmap_data.index,
-            aspect="auto",
-            title="Incident Heatmap (Month vs Day of Week)",
-            color_continuous_scale='YlOrRd'
+    with st.container(border=True):
+        st.subheader("High-Frequency Locations (Top 10)")
+        top_loc = filtered_df['Address'].value_counts().head(10).reset_index(name='Count')
+        fig_loc = px.bar(
+            top_loc, x='Count', y='Address',
+            orientation='h', color='Count',
+            color_continuous_scale=[[0, '#E8DAEF'], [1, '#8E44AD']]
         )
-        st.plotly_chart(fig_heatmap, width='stretch')
-
-    # Top Locations (Addresses)
-    st.subheader("Top Incident Locations")
-    top_loc_df = filtered_df['Address'].value_counts().head(10).reset_index()
-    top_loc_df.columns = ['Address', 'Count']
-    fig_loc = px.bar(
-        top_loc_df,
-        x='Count',
-        y='Address',
-        orientation='h',
-        title="Top 10 Responded Addresses",
-        color='Count',
-        color_continuous_scale='Purples'
-    )
-    fig_loc.update_layout(yaxis={'categoryorder':'total ascending'}, template="plotly_white")
-    st.plotly_chart(fig_loc, width='stretch')
+        fig_loc.update_layout(
+            yaxis={'categoryorder':'total ascending', 'title': ''},
+            plot_bgcolor='rgba(0,0,0,0)',
+            height=400,
+            margin=dict(l=0, r=0, t=10, b=0),
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig_loc, width="stretch")
 
 with tab3:
-    st.subheader("Incident Data Explorer")
+    with st.container(border=True):
+        st.subheader("Incident Registry")
+        st.info("💡 Use the sidebar search to filter incidents by keywords in the notes (e.g., 'cooking', 'accident', 'woods').")
 
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        # Download Button
-        csv = filtered_df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download CSV",
-            data=csv,
-            file_name='filtered_fire_incidents.csv',
-            mime='text/csv',
-            width='stretch'
+        col_dl, col_sp = st.columns([1, 4])
+        with col_dl:
+            csv = filtered_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Export Data (CSV)",
+                data=csv,
+                file_name='fire_rescue_export.csv',
+                mime='text/csv',
+                width="stretch"
+            )
+
+        st.dataframe(
+            filtered_df[['Date', 'Incident #', 'Standardized Call Category', 'Address', 'Notes', 'Day_of_Week']],
+            width="stretch",
+            hide_index=True
         )
 
-    # Searchable Dataframe
-    st.dataframe(
-        filtered_df[['Date', 'Incident #', 'Standardized Call Category', 'Address', 'Notes', 'Day_of_Week']],
-        width='stretch',
-        hide_index=True
-    )
+    if not filtered_df.empty:
+        with st.container(border=True):
+            st.subheader("🔍 Detailed Incident Lookup")
+            selected_idx = st.selectbox(
+                "Select an incident for full report details:",
+                options=filtered_df.index,
+                format_func=lambda x: f"{filtered_df.loc[x, 'Date'].strftime('%Y-%m-%d')} | {filtered_df.loc[x, 'Incident #']} | {filtered_df.loc[x, 'Standardized Call Category']}"
+            )
+
+            det = filtered_df.loc[selected_idx]
+            d1, d2, d3 = st.columns(3)
+            with d1:
+                st.markdown(f"**INCIDENT NUMBER**\n{det['Incident #']}")
+                st.markdown(f"**DATE / TIME**\n{det['Date'].strftime('%A, %B %d, %Y')}")
+            with d2:
+                st.markdown(f"**ADDRESS**\n{det['Address']}")
+                st.markdown(f"**CATEGORY**\n{det['Standardized Call Category']}")
+            with d3:
+                st.markdown(f"**PROPERTY OWNER / DESC**\n{det['Property Owner / Desc.'] if pd.notna(det['Property Owner / Desc.']) else 'N/A'}")
+                st.markdown(f"**CALL TYPE**\n{det['Call Type']}")
+
+            st.markdown(f"**OFFICIAL NOTES:**")
+            st.info(det['Notes'] if pd.notna(det['Notes']) and det['Notes'] != "" else "No notes recorded for this incident.")
