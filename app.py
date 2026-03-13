@@ -178,21 +178,25 @@ with tab1:
     c5, c6 = st.columns(2, vertical_alignment="top")
     with c5:
         fig_weekday = px.bar(
-            weekday, x="Weekday", y="Calls",
+            weekday,
+            x="Weekday",
+            y="Calls",
             title="Calls by Weekday",
-            color="Weekday",
-            color_discrete_sequence=px.colors.qualitative.Plotly,
-            template="plotly_dark"
+            color="Calls",
+            color_continuous_scale="Reds",
+            template="plotly_dark",
         )
         fig_weekday.update_layout(xaxis_title="", yaxis_title="Calls", height=380, showlegend=False)
         st.plotly_chart(fig_weekday, width="stretch")
     with c6:
         fig_monthname = px.bar(
-            month_name, x="Month Name", y="Calls",
+            month_name,
+            x="Month Name",
+            y="Calls",
             title="Calls by Calendar Month",
-            color="Month Name",
-            color_discrete_sequence=px.colors.qualitative.Set3,
-            template="plotly_dark"
+            color="Calls",
+            color_continuous_scale="Reds",
+            template="plotly_dark",
         )
         fig_monthname.update_layout(xaxis_title="", yaxis_title="Calls", height=380, showlegend=False)
         st.plotly_chart(fig_monthname, width="stretch")
@@ -202,8 +206,9 @@ with tab1:
         x="Year",
         y="Calls",
         title="Calls by Year",
+        color="Calls",
+        color_continuous_scale="Reds",
         template="plotly_dark",
-        color_discrete_sequence=["#D62728"],
     )
     fig_yearly.update_layout(height=420, xaxis_title="", yaxis_title="Calls")
     st.plotly_chart(fig_yearly, width="stretch")
@@ -211,11 +216,13 @@ with tab1:
 with tab2:
     fig_mix = px.bar(
         call_mix.head(top_n),
-        x="Calls", y="Primary Call Type", orientation="h",
+        x="Calls",
+        y="Primary Call Type",
+        orientation="h",
         title="Top Call Types",
-        color="Primary Call Type",
-        color_discrete_sequence=px.colors.qualitative.Vivid,
-        template="plotly_dark"
+        color="Calls",
+        color_continuous_scale="Reds",
+        template="plotly_dark",
     )
     fig_mix.update_layout(yaxis_title="", height=520, showlegend=False)
     st.plotly_chart(fig_mix, width="stretch")
