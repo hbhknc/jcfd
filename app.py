@@ -128,11 +128,7 @@ call_mix = filtered.groupby("Primary Call Type", as_index=False).size().rename(c
 weekday = filtered.groupby("Weekday", as_index=False, observed=False).size().rename(columns={"size": "Calls"})
 month_name = filtered.groupby("Month Name", as_index=False, observed=False).size().rename(columns={"size": "Calls"})
 hotspots = filtered.groupby("Address", as_index=False).size().rename(columns={"size": "Calls"}).sort_values("Calls", ascending=False)
-hour_weekday = (
-    filtered.groupby(["Weekday", "Hour"], observed=False)
-    .size()
-    .reset_index(name="Calls")
-)
+yearly = filtered.groupby("Year", as_index=False).size().rename(columns={"size": "Calls"})
 
 days_selected = (selected_end_ts.normalize() - selected_start_ts.normalize()).days + 1
 prev_end_ts = selected_start_ts - pd.Timedelta(seconds=1)
@@ -201,17 +197,16 @@ with tab1:
         fig_monthname.update_layout(xaxis_title="", yaxis_title="Calls", height=380, showlegend=False)
         st.plotly_chart(fig_monthname, width="stretch")
 
-    fig_heat = px.density_heatmap(
-        hour_weekday,
-        x="Hour",
-        y="Weekday",
-        z="Calls",
-        color_continuous_scale="Reds",
-        title="Calls by Hour and Weekday",
+    fig_yearly = px.bar(
+        yearly,
+        x="Year",
+        y="Calls",
+        title="Calls by Year",
         template="plotly_dark",
+        color_discrete_sequence=["#D62728"],
     )
-    fig_heat.update_layout(height=420)
-    st.plotly_chart(fig_heat, width="stretch")
+    fig_yearly.update_layout(height=420, xaxis_title="", yaxis_title="Calls")
+    st.plotly_chart(fig_yearly, width="stretch")
 
 with tab2:
     fig_mix = px.bar(
