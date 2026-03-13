@@ -102,15 +102,15 @@ if filtered.empty:
 
 monthly = filtered.groupby("Month", as_index=False).size().rename(columns={"size": "Calls"})
 call_mix = filtered.groupby("Primary Call Type", as_index=False).size().rename(columns={"size": "Calls"}).sort_values("Calls", ascending=False)
-weekday = filtered.groupby("Weekday", as_index=False).size().rename(columns={"size": "Calls"})
-month_name = filtered.groupby("Month Name", as_index=False).size().rename(columns={"size": "Calls"})
+weekday = filtered.groupby("Weekday", as_index=False, observed=False).size().rename(columns={"size": "Calls"})
+month_name = filtered.groupby("Month Name", as_index=False, observed=False).size().rename(columns={"size": "Calls"})
 hotspots = filtered.groupby("Address", as_index=False).size().rename(columns={"size": "Calls"}).sort_values("Calls", ascending=False)
 
 top_call_type = call_mix.iloc[0]["Primary Call Type"] if not call_mix.empty else "—"
 busiest_address = hotspots.iloc[0]["Address"] if not hotspots.empty else "—"
 avg_per_month = monthly["Calls"].mean() if not monthly.empty else 0
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4 = st.columns(4, vertical_alignment="top")
 c1.metric("Total Calls", format_int(len(filtered)))
 c2.metric("Avg Calls / Month", f"{avg_per_month:.1f}")
 c3.metric("Top Call Type", top_call_type)
@@ -121,44 +121,62 @@ tab1, tab2, tab3, tab4 = st.tabs(["Trends", "Call Mix", "Hotspots", "Data"])
 with tab1:
     fig_monthly = px.line(
         monthly, x="Month", y="Calls", markers=True,
-        title="Monthly Call Volume"
+        title="Monthly Call Volume",
+        template="plotly_dark",
+        color_discrete_sequence=["#D62728"]
     )
     fig_monthly.update_layout(xaxis_title="", yaxis_title="Calls", height=420)
-    st.plotly_chart(fig_monthly, use_container_width=True)
+    st.plotly_chart(fig_monthly, width="stretch")
 
-    c5, c6 = st.columns(2)
+    c5, c6 = st.columns(2, vertical_alignment="top")
     with c5:
-        fig_weekday = px.bar(weekday, x="Weekday", y="Calls", title="Calls by Weekday")
-        fig_weekday.update_layout(xaxis_title="", yaxis_title="Calls", height=380)
-        st.plotly_chart(fig_weekday, use_container_width=True)
+        fig_weekday = px.bar(
+            weekday, x="Weekday", y="Calls",
+            title="Calls by Weekday",
+            color="Weekday",
+            color_discrete_sequence=px.colors.qualitative.Plotly,
+            template="plotly_dark"
+        )
+        fig_weekday.update_layout(xaxis_title="", yaxis_title="Calls", height=380, showlegend=False)
+        st.plotly_chart(fig_weekday, width="stretch")
     with c6:
-        fig_monthname = px.bar(month_name, x="Month Name", y="Calls", title="Calls by Calendar Month")
-        fig_monthname.update_layout(xaxis_title="", yaxis_title="Calls", height=380)
-        st.plotly_chart(fig_monthname, use_container_width=True)
+        fig_monthname = px.bar(
+            month_name, x="Month Name", y="Calls",
+            title="Calls by Calendar Month",
+            color="Month Name",
+            color_discrete_sequence=px.colors.qualitative.Set3,
+            template="plotly_dark"
+        )
+        fig_monthname.update_layout(xaxis_title="", yaxis_title="Calls", height=380, showlegend=False)
+        st.plotly_chart(fig_monthname, width="stretch")
 
 with tab2:
     fig_mix = px.bar(
         call_mix.head(15),
         x="Calls", y="Primary Call Type", orientation="h",
-        title="Top Call Types"
+        title="Top Call Types",
+        color="Primary Call Type",
+        color_discrete_sequence=px.colors.qualitative.Vivid,
+        template="plotly_dark"
     )
-    fig_mix.update_layout(yaxis_title="", height=520)
-    st.plotly_chart(fig_mix, use_container_width=True)
+    fig_mix.update_layout(yaxis_title="", height=520, showlegend=False)
+    st.plotly_chart(fig_mix, width="stretch")
 
     fig_pie = px.pie(
         call_mix.head(10),
         names="Primary Call Type",
         values="Calls",
-        title="Call Type Share (Top 10)"
+        title="Call Type Share (Top 10)",
+        template="plotly_dark"
     )
     fig_pie.update_layout(height=520)
-    st.plotly_chart(fig_pie, use_container_width=True)
+    st.plotly_chart(fig_pie, width="stretch")
 
 with tab3:
     st.subheader("Top Addresses")
     st.dataframe(
         hotspots.head(25),
-        use_container_width=True,
+        width="stretch",
         hide_index=True
     )
 
@@ -166,7 +184,7 @@ with tab4:
     show_cols = ["Date", "Address", "Primary Call Type", "Year"]
     st.dataframe(
         filtered[show_cols].sort_values("Date", ascending=False),
-        use_container_width=True,
+        width="stretch",
         hide_index=True
     )
 
@@ -175,5 +193,6 @@ with tab4:
         "Download filtered CSV",
         data=csv_bytes,
         file_name="jcfd_fire_calls_filtered.csv",
-        mime="text/csv"
+        mime="text/csv",
+        width="stretch"
     )
