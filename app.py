@@ -6,7 +6,7 @@ import plotly.express as px
 import streamlit as st
 
 st.set_page_config(
-    page_title="FireStat",
+    page_title="Fire Call Dashboard",
     page_icon="🚒",
     layout="wide",
 )
@@ -88,8 +88,8 @@ def filter_calls(df, years, call_types, start_ts, end_ts, address_query=""):
     return filtered_df
 
 
-st.title("🚒 Fire Call Dashboard")
-st.caption("Jordans Chapel Fire Department")
+st.title("Fire Calls Dashboard")
+st.caption("Interactive analysis of fire call activity for Jordans Chapel Fire Department.")
 
 with st.sidebar:
     st.header("Controls")
