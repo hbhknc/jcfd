@@ -120,6 +120,14 @@ if filtered.empty:
     st.warning("No records match the current filters.")
     st.stop()
 
+selected_years_label = f"{min(selected_years)}–{max(selected_years)}" if selected_years else "None"
+selected_type_count = len(selected_types)
+address_label = address_search.strip() if address_search.strip() else "Any"
+st.info(
+    f"Filter context: Years {selected_years_label} | Date range {selected_start} to {selected_end} | "
+    f"Call types selected: {selected_type_count} | Address contains: {address_label}"
+)
+
 monthly = filtered.groupby("Month", as_index=False).size().rename(columns={"size": "Calls"})
 monthly = monthly.sort_values("Month")
 monthly["Rolling 3-Month Avg"] = monthly["Calls"].rolling(window=3, min_periods=1).mean()
@@ -150,6 +158,17 @@ top_call_type = call_mix.iloc[0]["Primary Call Type"] if not call_mix.empty else
 busiest_address = hotspots.iloc[0]["Address"] if not hotspots.empty else "—"
 avg_per_month = monthly["Calls"].mean() if not monthly.empty else 0
 
+peak_month = monthly.loc[monthly["Calls"].idxmax(), "Month"] if not monthly.empty else None
+peak_month_calls = monthly["Calls"].max() if not monthly.empty else 0
+peak_month_label = peak_month.strftime("%Y-%m") if peak_month is not None else "—"
+
+if not call_mix.empty and len(filtered) > 0:
+    top_share_pct = (call_mix.iloc[0]["Calls"] / len(filtered)) * 100
+else:
+    top_share_pct = None
+
+trend_label = (f"{call_delta_pct:+.1f}% vs prior period" if call_delta_pct is not None else "No prior-period data")
+
 c1, c2, c3, c4 = st.columns(4, vertical_alignment="top")
 c1.metric(
     "Total Calls",
@@ -160,9 +179,23 @@ c2.metric("Avg Calls / Month", f"{avg_per_month:.1f}")
 c3.metric("Top Call Type", top_call_type)
 c4.metric("Busiest Address", busiest_address)
 
+with st.expander("Insights summary", expanded=True):
+    st.markdown(
+        f"- **Peak month in selection:** {peak_month_label} ({format_int(peak_month_calls)} calls)"
+    )
+    if top_share_pct is not None:
+        st.markdown(
+            f"- **Largest call type share:** {top_call_type} ({top_share_pct:.1f}% of filtered calls)"
+        )
+    else:
+        st.markdown("- **Largest call type share:** —")
+    st.markdown(f"- **Overall trend:** {trend_label}")
+
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Trends", "Call Mix", "Hotspots", "Data", "Data Quality"])
 
 with tab1:
+    st.caption("Bar chart heatmap: darker red indicates higher call volume.")
+
     fig_monthly = px.line(
         monthly,
         x="Month",
