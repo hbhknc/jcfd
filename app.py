@@ -56,6 +56,7 @@ def load_data(uploaded_file=None):
         categories=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         ordered=True,
     )
+    df["Hour"] = df["Date"].dt.hour
     return df
 
 def format_int(value):
@@ -83,14 +84,33 @@ with st.sidebar:
     years = sorted(df["Year"].dropna().unique().tolist())
     selected_years = st.multiselect("Year", years, default=years)
 
+    min_date = df["Date"].min().date()
+    max_date = df["Date"].max().date()
+    selected_date_range = st.date_input(
+        "Date range",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date,
+    )
+
     call_types = sorted(df["Primary Call Type"].dropna().unique().tolist())
     selected_types = st.multiselect("Primary Call Type", call_types, default=call_types)
 
     address_search = st.text_input("Address contains", placeholder="e.g. US Highway")
+    top_n = st.slider("Top N categories", min_value=5, max_value=30, value=15)
+
+if isinstance(selected_date_range, tuple) and len(selected_date_range) == 2:
+    selected_start, selected_end = selected_date_range
+else:
+    selected_start, selected_end = min_date, max_date
+
+selected_start_ts = pd.Timestamp(selected_start)
+selected_end_ts = pd.Timestamp(selected_end) + pd.Timedelta(days=1) - pd.Timedelta(seconds=1)
 
 filtered = df[
     df["Year"].isin(selected_years) &
-    df["Primary Call Type"].isin(selected_types)
+    df["Primary Call Type"].isin(selected_types) &
+    df["Date"].between(selected_start_ts, selected_end_ts)
 ].copy()
 
 if address_search.strip():
@@ -101,31 +121,62 @@ if filtered.empty:
     st.stop()
 
 monthly = filtered.groupby("Month", as_index=False).size().rename(columns={"size": "Calls"})
+monthly = monthly.sort_values("Month")
+monthly["Rolling 3-Month Avg"] = monthly["Calls"].rolling(window=3, min_periods=1).mean()
+
 call_mix = filtered.groupby("Primary Call Type", as_index=False).size().rename(columns={"size": "Calls"}).sort_values("Calls", ascending=False)
 weekday = filtered.groupby("Weekday", as_index=False, observed=False).size().rename(columns={"size": "Calls"})
 month_name = filtered.groupby("Month Name", as_index=False, observed=False).size().rename(columns={"size": "Calls"})
 hotspots = filtered.groupby("Address", as_index=False).size().rename(columns={"size": "Calls"}).sort_values("Calls", ascending=False)
+hour_weekday = (
+    filtered.groupby(["Weekday", "Hour"], observed=False)
+    .size()
+    .reset_index(name="Calls")
+)
+
+days_selected = (selected_end_ts.normalize() - selected_start_ts.normalize()).days + 1
+prev_end_ts = selected_start_ts - pd.Timedelta(seconds=1)
+prev_start_ts = prev_end_ts - pd.Timedelta(days=max(days_selected - 1, 0))
+
+previous_period = df[
+    df["Primary Call Type"].isin(selected_types) &
+    df["Date"].between(prev_start_ts, prev_end_ts)
+].copy()
+if address_search.strip():
+    previous_period = previous_period[
+        previous_period["Address"].str.contains(address_search.strip(), case=False, na=False)
+    ]
+
+prev_total_calls = len(previous_period)
+call_delta_pct = ((len(filtered) - prev_total_calls) / prev_total_calls * 100) if prev_total_calls else None
 
 top_call_type = call_mix.iloc[0]["Primary Call Type"] if not call_mix.empty else "—"
 busiest_address = hotspots.iloc[0]["Address"] if not hotspots.empty else "—"
 avg_per_month = monthly["Calls"].mean() if not monthly.empty else 0
 
 c1, c2, c3, c4 = st.columns(4, vertical_alignment="top")
-c1.metric("Total Calls", format_int(len(filtered)))
+c1.metric(
+    "Total Calls",
+    format_int(len(filtered)),
+    delta=(f"{call_delta_pct:+.1f}% vs prior period" if call_delta_pct is not None else "No prior-period data"),
+)
 c2.metric("Avg Calls / Month", f"{avg_per_month:.1f}")
 c3.metric("Top Call Type", top_call_type)
 c4.metric("Busiest Address", busiest_address)
 
-tab1, tab2, tab3, tab4 = st.tabs(["Trends", "Call Mix", "Hotspots", "Data"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Trends", "Call Mix", "Hotspots", "Data", "Data Quality"])
 
 with tab1:
     fig_monthly = px.line(
-        monthly, x="Month", y="Calls", markers=True,
+        monthly,
+        x="Month",
+        y=["Calls", "Rolling 3-Month Avg"],
+        markers=True,
         title="Monthly Call Volume",
         template="plotly_dark",
-        color_discrete_sequence=["#D62728"]
+        color_discrete_sequence=["#D62728", "#FFD166"],
     )
-    fig_monthly.update_layout(xaxis_title="", yaxis_title="Calls", height=420)
+    fig_monthly.update_layout(xaxis_title="", yaxis_title="Calls", height=420, legend_title_text="Series")
     st.plotly_chart(fig_monthly, width="stretch")
 
     c5, c6 = st.columns(2, vertical_alignment="top")
@@ -150,9 +201,21 @@ with tab1:
         fig_monthname.update_layout(xaxis_title="", yaxis_title="Calls", height=380, showlegend=False)
         st.plotly_chart(fig_monthname, width="stretch")
 
+    fig_heat = px.density_heatmap(
+        hour_weekday,
+        x="Hour",
+        y="Weekday",
+        z="Calls",
+        color_continuous_scale="Reds",
+        title="Calls by Hour and Weekday",
+        template="plotly_dark",
+    )
+    fig_heat.update_layout(height=420)
+    st.plotly_chart(fig_heat, width="stretch")
+
 with tab2:
     fig_mix = px.bar(
-        call_mix.head(15),
+        call_mix.head(top_n),
         x="Calls", y="Primary Call Type", orientation="h",
         title="Top Call Types",
         color="Primary Call Type",
@@ -163,7 +226,7 @@ with tab2:
     st.plotly_chart(fig_mix, width="stretch")
 
     fig_pie = px.pie(
-        call_mix.head(10),
+        call_mix.head(min(top_n, 10)),
         names="Primary Call Type",
         values="Calls",
         title="Call Type Share (Top 10)",
@@ -175,7 +238,7 @@ with tab2:
 with tab3:
     st.subheader("Top Addresses")
     st.dataframe(
-        hotspots.head(25),
+        hotspots.head(top_n),
         width="stretch",
         hide_index=True
     )
@@ -196,3 +259,16 @@ with tab4:
         mime="text/csv",
         width="stretch"
     )
+
+with tab5:
+    st.subheader("Data quality checks")
+    duplicate_rows = filtered.duplicated(subset=["Date", "Address", "Primary Call Type"]).sum()
+    unknown_address = (filtered["Address"].str.lower() == "unknown").sum()
+    unknown_call_type = (filtered["Primary Call Type"].str.lower() == "unknown").sum()
+
+    q1, q2, q3 = st.columns(3)
+    q1.metric("Potential duplicate rows", format_int(duplicate_rows))
+    q2.metric("Unknown addresses", format_int(unknown_address))
+    q3.metric("Unknown call types", format_int(unknown_call_type))
+
+    st.caption("Duplicates are counted by matching Date + Address + Primary Call Type.")
