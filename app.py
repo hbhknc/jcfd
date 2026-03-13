@@ -6,7 +6,7 @@ import plotly.express as px
 import streamlit as st
 
 st.set_page_config(
-    page_title="JCFD Fire Calls Dashboard",
+    page_title="Fire Call Dashboard",
     page_icon="🚒",
     layout="wide",
 )
