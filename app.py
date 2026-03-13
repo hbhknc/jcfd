@@ -88,8 +88,8 @@ def filter_calls(df, years, call_types, start_ts, end_ts, address_query=""):
     return filtered_df
 
 
-st.title("🚒 JCFD Fire Calls Dashboard")
-st.caption("Interactive analysis of fire call activity from the uploaded log.")
+st.title("Fire Calls Dashboard")
+st.caption("Interactive analysis of fire call activity for Jordans Chapel Fire Department.")
 
 with st.sidebar:
     st.header("Controls")
