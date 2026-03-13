@@ -56,6 +56,7 @@ def load_data(uploaded_file=None):
         categories=["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         ordered=True,
     )
+    df["Hour"] = df["Date"].dt.hour
     return df
 
 def format_int(value):
