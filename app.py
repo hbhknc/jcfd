@@ -136,6 +136,8 @@ call_mix = filtered.groupby("Primary Call Type", as_index=False).size().rename(c
 weekday = filtered.groupby("Weekday", as_index=False, observed=False).size().rename(columns={"size": "Calls"})
 month_name = filtered.groupby("Month Name", as_index=False, observed=False).size().rename(columns={"size": "Calls"})
 hotspots = filtered.groupby("Address", as_index=False).size().rename(columns={"size": "Calls"}).sort_values("Calls", ascending=False)
+hotspots["Share %"] = (hotspots["Calls"] / len(filtered) * 100).round(1)
+hotspots["Cumulative Share %"] = hotspots["Share %"].cumsum().round(1)
 yearly = filtered.groupby("Year", as_index=False).size().rename(columns={"size": "Calls"})
 
 days_selected = (selected_end_ts.normalize() - selected_start_ts.normalize()).days + 1
@@ -272,8 +274,10 @@ with tab2:
 
 with tab3:
     st.subheader("Top Addresses")
+    st.caption("Includes each address share of filtered calls and cumulative concentration (Pareto view).")
+    hotspot_cols = ["Address", "Calls", "Share %", "Cumulative Share %"]
     st.dataframe(
-        hotspots.head(top_n),
+        hotspots[hotspot_cols].head(top_n),
         width="stretch",
         hide_index=True
     )
@@ -297,7 +301,8 @@ with tab4:
 
 with tab5:
     st.subheader("Data quality checks")
-    duplicate_rows = filtered.duplicated(subset=["Date", "Address", "Primary Call Type"]).sum()
+    duplicate_mask = filtered.duplicated(subset=["Date", "Address", "Primary Call Type"], keep=False)
+    duplicate_rows = int(duplicate_mask.sum())
     unknown_address = (filtered["Address"].str.lower() == "unknown").sum()
     unknown_call_type = (filtered["Primary Call Type"].str.lower() == "unknown").sum()
 
@@ -307,3 +312,16 @@ with tab5:
     q3.metric("Unknown call types", format_int(unknown_call_type))
 
     st.caption("Duplicates are counted by matching Date + Address + Primary Call Type.")
+
+    duplicate_detail_cols = ["Date", "Address", "Primary Call Type", "Year"]
+    duplicate_details = (
+        filtered.loc[duplicate_mask, duplicate_detail_cols]
+        .sort_values(["Date", "Address", "Primary Call Type"], ascending=[False, True, True])
+        .head(20)
+    )
+
+    if duplicate_details.empty:
+        st.success("No duplicate groups found for the current filters.")
+    else:
+        st.markdown("**Example duplicate rows (up to 20):**")
+        st.dataframe(duplicate_details, width="stretch", hide_index=True)
